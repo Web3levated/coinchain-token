@@ -25,4 +25,26 @@ describe("BEP20Token", () => {
             expect(await bep20Token.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("200000000"));
         })
     })
+
+    describe("maxTransactionLimit", async () => {
+        it("should revert if transaction exceeds limit", async () => {
+            await bep20Token.setTxnTokenLimit(ethers.utils.parseEther("99"));
+            await bep20Token.setMaxTxnLimitEnabled(true);
+            await bep20Token.transfer(addr1.address, ethers.utils.parseEther("100"));
+            await expect(bep20Token.connect(addr1).transfer(owner.address, ethers.utils.parseEther("100"))).to.be.revertedWith("Token amount exceeds limit");
+        });
+        it("Should not revert if flag is set to false", async () => {
+            await bep20Token.setTxnTokenLimit(ethers.utils.parseEther("99"));
+            await bep20Token.setMaxTxnLimitEnabled(false);
+            await bep20Token.transfer(addr1.address, ethers.utils.parseEther("100"));
+            await expect(bep20Token.connect(addr1).transfer(owner.address, ethers.utils.parseEther("100"))).to.not.be.reverted;
+        });
+        it("Should not revert if address is whitelisted", async () => {
+            await bep20Token.setTxnTokenLimit(ethers.utils.parseEther("99"));
+            await bep20Token.setMaxTxnLimitEnabled(true);
+            await bep20Token.whitelistTxnLimit(addr1.address);
+            await bep20Token.transfer(addr1.address, ethers.utils.parseEther("100"));
+            await expect(bep20Token.connect(addr1).transfer(owner.address, ethers.utils.parseEther("100"))).to.not.be.reverted;
+        })
+    })
 })
