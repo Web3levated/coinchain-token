@@ -1,5 +1,10 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "test": "cross-env TS_NODE_TRANSPILE_ONLY=1 hardhat test",
+    "clean": "rimraf artifacts/ cache/ coverage/ typechain-types/ coverage.json",
+    "build": "cross-env TS_NODE_TRANSPILE_ONLY=1 npm run clean && hardhat compile"
+  },
   "devDependencies": {
     "@ethersproject/abi": "^5.6.4",
     "@ethersproject/providers": "^5.6.8",
@@ -13,10 +18,13 @@
     "@types/chai": "^4.3.1",
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.0.3",
+    "@uniswap/sdk": "^3.0.3",
     "chai": "^4.3.6",
+    "cross-env": "^7.0.3",
     "ethers": "^5.6.9",
     "hardhat": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.8",
+    "rimraf": "^3.0.2",
     "solidity-coverage": "^0.7.21",
     "ts-node": "^10.8.2",
     "typechain": "^8.1.0",
