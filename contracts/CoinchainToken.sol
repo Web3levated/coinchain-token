@@ -50,6 +50,11 @@ contract CoinchainToken is AccessControl, ERC20{
                    MINTING FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+        @notice mint function that can only be called by authorized address
+        @param to address to mint the tokens to
+        @param amount amount of tokens to mint
+     */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE){
         _mint(to, amount);
     }
@@ -97,6 +102,7 @@ contract CoinchainToken is AccessControl, ERC20{
     /*///////////////////////////////////////////////////////////////
                    HOOKS
     //////////////////////////////////////////////////////////////*/
+    
     function _beforeTokenTransfer(
         address from, 
         address to, 
