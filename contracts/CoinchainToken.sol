@@ -2,9 +2,12 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; 
+import "@openzeppelin/contracts/access/AccessControl.sol"; 
 
-contract CoinchainToken is Ownable, ERC20{
+contract CoinchainToken is AccessControl, ERC20{
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
   /*///////////////////////////////////////////////////////////////
                     GLOBAL STATE
@@ -12,11 +15,11 @@ contract CoinchainToken is Ownable, ERC20{
 
     // boolean to control whether transfer limit is active
     bool public transferLimitEnabled;
-    // maximum amount of tokens that can be transfered when transfer limit is active
+    // maximum amount of tokens that can be transfered when transfer limit is active. used to mitigate bot impact
     uint256 public transferLimit;
     // address of the uniswap pair
     address public pairAddress;
-    // block number when initial liquidity added to uniswap
+    // block number when initial liquidity added to uniswap used to disable transfers within the same block as liquidity add
     uint256 public liqAddBlock;
 
 
@@ -37,11 +40,21 @@ contract CoinchainToken is Ownable, ERC20{
         uint256 _initialSupply,
         address WETH
     ) ERC20(_name, _symbol){
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
         pairAddress = generatePairAddress(address(this), WETH);
         _mint(msg.sender, _initialSupply);
     }
 
-  /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
+                   MINTING FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE){
+        _mint(to, amount);
+    }
+
+    /*///////////////////////////////////////////////////////////////
                    INTERNAL HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -61,7 +74,7 @@ contract CoinchainToken is Ownable, ERC20{
                 )))));
     }
 
-  /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
                    ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -69,7 +82,7 @@ contract CoinchainToken is Ownable, ERC20{
         @notice sets the max transfer limit
         @param _transferLimit new transfer limit to be set
      */
-    function setTransferLimit(uint256 _transferLimit) external onlyOwner{
+    function setTransferLimit(uint256 _transferLimit) external onlyRole(ADMIN_ROLE){
         transferLimit = _transferLimit;
     }
 
@@ -77,11 +90,11 @@ contract CoinchainToken is Ownable, ERC20{
         @notice sets the boolean to enable and disable transfer limit 
         @param _transferLimitEnabled boolean for which to set the transferLimitEnabled flag
      */
-    function setTransferLimitEnabled(bool _transferLimitEnabled) external onlyOwner{
+    function setTransferLimitEnabled(bool _transferLimitEnabled) external onlyRole(ADMIN_ROLE){
         transferLimitEnabled = _transferLimitEnabled;
     }
 
-  /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
                    HOOKS
     //////////////////////////////////////////////////////////////*/
     function _beforeTokenTransfer(
@@ -89,11 +102,11 @@ contract CoinchainToken is Ownable, ERC20{
         address to, 
         uint256 amount
     ) internal override {
-        require(from == owner() || block.number > liqAddBlock, "Token transfers disallowed in same block as liquidity add");
-        if(transferLimitEnabled && from != owner()){
+        require(hasRole(ADMIN_ROLE, from) || block.number > liqAddBlock, "Token transfers disallowed in same block as liquidity add");
+        if(transferLimitEnabled && !hasRole(ADMIN_ROLE, from)){
             require(amount <= transferLimit, "Token transfer amount exceeds limit");
         }
-        if(to != address(0) && (from == owner() && to == pairAddress)){
+        if(to != address(0) && (hasRole(ADMIN_ROLE, from) && to == pairAddress)){
             liqAddBlock = block.number;
         }
         super._beforeTokenTransfer(from, to, amount);

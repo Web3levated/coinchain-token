@@ -4,6 +4,8 @@ import { ethers } from "hardhat";
 import { CoinchainToken } from "../typechain-types";
 import { FACTORY_ADDRESS, INIT_CODE_HASH } from '@uniswap/sdk'
 import { mineBlock, setAutoMine } from "./utils/helpers";
+import { keccak256 } from "ethers/lib/utils";
+import { config } from "dotenv";
 
 
 describe("CoinchainToken", () => {
@@ -33,6 +35,8 @@ describe("CoinchainToken", () => {
             expect(await coinchainToken.totalSupply()).to.equal(ethers.utils.parseEther("200000000"));
             expect(await coinchainToken.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("200000000"));
             expect(await coinchainToken.pairAddress()).to.equal(expectedPairAddress);
+            expect(await coinchainToken.hasRole(await coinchainToken.DEFAULT_ADMIN_ROLE(), owner.address)).to.be.true;
+            expect(await coinchainToken.hasRole(await coinchainToken.ADMIN_ROLE(), owner.address)).to.be.true;
         })
     })
 
@@ -61,7 +65,7 @@ describe("CoinchainToken", () => {
             await coinchainToken.connect(owner).transfer(await coinchainToken.pairAddress(), ethers.utils.parseEther("100000"));
             let botTx = await coinchainToken.connect(addr1).transfer(addr2.address, ethers.utils.parseEther("100"));
             await setAutoMine(true);
-            await expect( botTx.wait()).to.be.reverted;
+            await expect(botTx.wait()).to.be.reverted;
         });
         it("Should not revert if transfer in block after liquidity add", async () => {
             await coinchainToken.connect(owner).transfer(addr1.address, ethers.utils.parseEther("100"));
@@ -70,7 +74,38 @@ describe("CoinchainToken", () => {
             await mineBlock();
             let botTx = await coinchainToken.connect(addr1).transfer(addr2.address, ethers.utils.parseEther("100"));
             await setAutoMine(true);
-            await expect( botTx.wait()).to.not.be.reverted;
+            expect( botTx.wait()).to.not.be.reverted;
         });
+    });
+
+    describe("mint", async () => {
+        it("Should revert if caller does not have minter role", async ()=> {
+            await expect(coinchainToken.connect(addr1).mint(addr1.address, ethers.utils.parseEther("1000000")))
+                .to.be.reverted;
+        })
+
+        it("Should revert if caller has different role", async () => {
+            expect(await coinchainToken.hasRole(await coinchainToken.ADMIN_ROLE(), owner.address)).to.be.true;
+            expect(await coinchainToken.hasRole(await coinchainToken.MINTER_ROLE(), owner.address)).to.be.false;
+            await expect(coinchainToken.connect(owner).mint(addr1.address, ethers.utils.parseEther("1000000")))
+                .to.be.reverted;
+        })
+
+        it("Should revert if minter role has been revoked", async () => {
+            const minterRole = await coinchainToken.MINTER_ROLE();
+            await coinchainToken.grantRole(minterRole, addr1.address);
+            await coinchainToken.connect(addr1).mint(addr1.address, ethers.utils.parseEther("1000000"));
+            expect(await coinchainToken.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("1000000"));
+            await coinchainToken.connect(owner).revokeRole(minterRole, addr1.address);
+            await expect(coinchainToken.mint(addr1.address, ethers.utils.parseEther("1000000")))
+                .to.be.reverted;
+        })
+
+        it("Should mint 1000000 tokens to given address", async () => {
+            await coinchainToken.grantRole(await coinchainToken.MINTER_ROLE(), addr1.address);
+            await coinchainToken.connect(addr1).mint(addr1.address, ethers.utils.parseEther("1000000"));
+            expect(await coinchainToken.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("1000000"));
+        })
+
     })
 })
