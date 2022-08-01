@@ -123,4 +123,10 @@ describe("CoinchainToken", () => {
             expect(await coinchainToken.balanceOf(addr1.address)).to.equal(0);
         })
     })
+
+    describe("failing test", async () => {
+        it("Should fail", () => {
+            expect(false).to.be.true;
+        })
+    })
 })
