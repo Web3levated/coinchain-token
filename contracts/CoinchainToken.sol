@@ -2,9 +2,10 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol"; 
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol"; 
 
-contract CoinchainToken is AccessControl, ERC20{
+contract CoinchainToken is AccessControl, ERC20, ERC20Burnable{
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -107,7 +108,7 @@ contract CoinchainToken is AccessControl, ERC20{
         address from, 
         address to, 
         uint256 amount
-    ) internal override {
+    ) internal virtual override {
         require(hasRole(ADMIN_ROLE, from) || block.number > liqAddBlock, "Token transfers disallowed in same block as liquidity add");
         if(transferLimitEnabled && !hasRole(ADMIN_ROLE, from)){
             require(amount <= transferLimit, "Token transfer amount exceeds limit");

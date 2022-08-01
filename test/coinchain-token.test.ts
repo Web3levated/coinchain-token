@@ -108,4 +108,19 @@ describe("CoinchainToken", () => {
         })
 
     })
+
+    describe("burn", async () => {
+        it("Should revert if caller does not own tokens", async () => {
+            await coinchainToken.transfer(addr1.address, ethers.utils.parseEther("100"));
+            await expect(coinchainToken.connect(addr2).burnFrom(addr1.address, ethers.utils.parseEther("100")))
+                .to.be.reverted;
+        });
+
+        it("Should burn 100 tokens", async () => {
+            await coinchainToken.transfer(addr1.address, ethers.utils.parseEther("100"));
+            expect(await coinchainToken.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("100"));
+            await coinchainToken.connect(addr1).burn(ethers.utils.parseEther("100"));
+            expect(await coinchainToken.balanceOf(addr1.address)).to.equal(0);
+        })
+    })
 })
