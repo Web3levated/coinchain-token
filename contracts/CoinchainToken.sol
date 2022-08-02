@@ -22,6 +22,8 @@ contract CoinchainToken is AccessControl, ERC20, ERC20Burnable{
     address public pairAddress;
     // block number when initial liquidity added to uniswap used to disable transfers within the same block as liquidity add
     uint256 public liqAddBlock;
+    // private boolean to that liquidity bot protection is only activated on initial liquidity add
+    bool private liquidityAdded; 
 
 
   /*///////////////////////////////////////////////////////////////
@@ -39,12 +41,13 @@ contract CoinchainToken is AccessControl, ERC20, ERC20Burnable{
         string memory _name,
         string memory _symbol,
         uint256 _initialSupply,
-        address WETH
+        address WETH,
+        address tokenReceiver
     ) ERC20(_name, _symbol){
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, tokenReceiver);
         _setupRole(ADMIN_ROLE, msg.sender);
         pairAddress = generatePairAddress(address(this), WETH);
-        _mint(msg.sender, _initialSupply);
+        _mint(tokenReceiver, _initialSupply);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -113,7 +116,7 @@ contract CoinchainToken is AccessControl, ERC20, ERC20Burnable{
         if(transferLimitEnabled && !hasRole(ADMIN_ROLE, from)){
             require(amount <= transferLimit, "Token transfer amount exceeds limit");
         }
-        if(to != address(0) && (hasRole(ADMIN_ROLE, from) && to == pairAddress)){
+        if(pairAddress != address(0) && !liquidityAdded && to == pairAddress){
             liqAddBlock = block.number;
         }
         super._beforeTokenTransfer(from, to, amount);
