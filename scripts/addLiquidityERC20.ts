@@ -6,6 +6,7 @@ async function main(){
     const [signer] = await ethers.getSigners();
     // const WETHAddress = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
     const routerAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+    const receiverAddress = "0xf5ec8C9d97228f13c6f6B8a66FD2c4104Bf63b95";
 
     
     const router = new ethers.Contract(routerAddress, UniswapRouterABI, signer);
@@ -14,7 +15,7 @@ async function main(){
     const weth = await ethers.getContractAt("IERC20", WETHAddress);
     const coinchainToken = await (
         await ethers.getContractFactory("CoinchainToken")
-    ).deploy("CCTEST", "CCT", ethers.utils.parseEther("200000000"), WETHAddress);
+    ).deploy("CCTEST", "CCT", ethers.utils.parseEther("200000000"), WETHAddress, receiverAddress);
     await coinchainToken.deployed();
     console.log("coinchainTokenAddress: ", coinchainToken.address);
 
