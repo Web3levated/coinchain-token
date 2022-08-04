@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { ERC20Mock, LockPayments } from "../typechain-types";
 import { FACTORY_ADDRESS, INIT_CODE_HASH } from '@uniswap/sdk'
-import { mineBlock, setAutoMine } from "./utils/helpers";
+import { getBlockTime, increaseTime, mineBlock, setAutoMine } from "./utils/helpers";
 import { keccak256 } from "ethers/lib/utils";
 import { config } from "dotenv";
 
@@ -25,7 +25,7 @@ describe.only("lockPayments", () => {
         await mock.deployed();
     })
 
-    describe("createBatch()", async () => {
+    describe.only("createBatch()", async () => {
         it("should create a batch with 1 address and 1 amount", async () => {
             await mock.mint(owner.address, ethers.utils.parseEther("100000"));
             await mock.approve(lockPayments.address, ethers.utils.parseEther("100000"));
@@ -82,6 +82,18 @@ describe.only("lockPayments", () => {
                 date, 
                 mock.address)
             ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+        })
+
+        it("Should revert if amounts exceed max uint256", async () => {
+            await mock.mint(owner.address, ethers.constants.MaxUint256);
+            console.log(await mock.balanceOf(owner.address));
+            await mock.approve(lockPayments.address, ethers.constants.MaxUint256);
+            let date = await getBlockTime() + 600;
+
+            // Creating batch 0
+            await expect(lockPayments.createBatch([addr1.address, addr2.address], [ethers.constants.MaxUint256, ethers.utils.parseEther("1")], date, mock.address))
+                .to.be.reverted;
+
         })
     })
 
@@ -171,7 +183,7 @@ describe.only("lockPayments", () => {
         })
     })
 
-    describe.only("removeBatch()", async () => {
+    describe("removeBatch()", async () => {
         it("should remove an entire batch", async () =>  {
             await mock.mint(owner.address, ethers.utils.parseEther("900000"));
             await mock.approve(lockPayments.address, ethers.utils.parseEther("900000"));
@@ -242,44 +254,58 @@ describe.only("lockPayments", () => {
             await lockPayments.removeBatch(1);
 
             // Remove batch functionality testing
-            // expect(await lockPayments.totalBatches()).to.equal(2);
+            expect(await mock.balanceOf(owner.address)).to.equal(ethers.utils.parseEther("300000"));
+            expect(await (await lockPayments.getBatchAttributes(1)).state).to.equal(2);
+            await expect(lockPayments.removeBatch(5)).to.revertedWith("Error: Invalid batchId (batch does not exist)");
 
-            console.log("Address 1: ", addr1.address);
-            console.log("Address 2: ", addr2.address);
-            console.log("Address 3: ", addr3.address);
-            console.log("Address 4: ", addr4.address);
-            console.log("Address 5: ", addr5.address);
-            console.log("Address 6: ", addr6.address);
-            console.log("Address 7: ", addr7.address);
-            console.log("Address 8: ", addr8.address);
-            console.log("Address 9: ", addr9.address);
-
-            console.log(await (await lockPayments.getBatchAttributes(0)).addresses);
-            console.log(await (await lockPayments.getBatchAttributes(1)).addresses);
-            console.log(await (await lockPayments.getBatchAttributes(2)).addresses);
-
-            expect(await (await lockPayments.getBatchAttributes(0))[0][0]).to.equal(addr1.address);
-            expect(await (await lockPayments.getBatchAttributes(0))[0][1]).to.equal(addr2.address);
-            expect(await (await lockPayments.getBatchAttributes(0))[0][2]).to.equal(addr3.address);
-            expect(await (await lockPayments.getBatchAttributes(0))[1][0]).to.equal(ethers.utils.parseEther("100000"));
-            expect(await (await lockPayments.getBatchAttributes(0))[1][1]).to.equal(ethers.utils.parseEther("100000"));
-            expect(await (await lockPayments.getBatchAttributes(0))[1][2]).to.equal(ethers.utils.parseEther("100000"));
-            expect(await (await lockPayments.getBatchAttributes(0))[2]).to.equal(date);
-            expect(await (await lockPayments.getBatchAttributes(0))[3]).to.equal(0);
-            expect(await (await lockPayments.getBatchAttributes(0))[4]).to.be.closeTo(ethers.BigNumber.from(Math.round(Date.now() / 1000)), 30);
-            expect(await (await lockPayments.getBatchAttributes(0))[5]).to.equal(0);
-
-            expect(await (await lockPayments.getBatchAttributes(1))[0][0]).to.equal(addr7.address);
-            expect(await (await lockPayments.getBatchAttributes(1))[0][1]).to.equal(addr8.address);
-            expect(await (await lockPayments.getBatchAttributes(1))[0][2]).to.equal(addr9.address);
-            expect(await (await lockPayments.getBatchAttributes(1))[1][0]).to.equal(ethers.utils.parseEther("100000"));
-            expect(await (await lockPayments.getBatchAttributes(1))[1][1]).to.equal(ethers.utils.parseEther("100000"));
-            expect(await (await lockPayments.getBatchAttributes(1))[1][2]).to.equal(ethers.utils.parseEther("100000"));
-            expect(await (await lockPayments.getBatchAttributes(1))[2]).to.equal(date);
-            expect(await (await lockPayments.getBatchAttributes(1))[3]).to.equal(0);
-            expect(await (await lockPayments.getBatchAttributes(1))[4]).to.be.closeTo(ethers.BigNumber.from(Math.round(Date.now() / 1000)), 30);
-            expect(await (await lockPayments.getBatchAttributes(1))[5]).to.equal(0);
         })
     })
 
+    describe.only("desperseBatch()", async () => {
+        it("Should revert if batch does not exist", async () => {
+            await expect(lockPayments.disperseBatch(0))
+                .to.be.revertedWith("Error: Invalid batchId (batch does not exist)") 
+        });
+
+        it("Should revert if state is Removed", async () => {
+            await mock.mint(owner.address, ethers.utils.parseEther("900000"));
+            await mock.approve(lockPayments.address, ethers.utils.parseEther("900000"));
+            let date = await getBlockTime() + 600;
+            // Creating batch 0
+            await lockPayments.createBatch([addr1.address, addr2.address, addr3.address], [ethers.utils.parseEther("100000"), ethers.utils.parseEther("100000"), ethers.utils.parseEther("100000")], date, mock.address);
+            await lockPayments.removeBatch(0);
+            await increaseTime(700);
+            await expect(lockPayments.disperseBatch(0)).to.be.revertedWith("Error: Invalid batchId (batch removed or completed)");
+        })
+
+        it("Should revert if state is Complete", async () => {
+            await mock.mint(owner.address, ethers.utils.parseEther("900000"));
+            await mock.approve(lockPayments.address, ethers.utils.parseEther("900000"));
+            let date = await getBlockTime() + 600;
+            // Creating batch 0
+            await lockPayments.createBatch([addr1.address, addr2.address, addr3.address], [ethers.utils.parseEther("100000"), ethers.utils.parseEther("100000"), ethers.utils.parseEther("100000")], date, mock.address);
+            await increaseTime(700);
+            await lockPayments.disperseBatch(0);
+            await expect(lockPayments.disperseBatch(0)).to.be.revertedWith("Error: Invalid batchId (batch removed or completed)");
+        })
+
+        it("Should disperse batch", async () => {
+            await mock.mint(owner.address, ethers.utils.parseEther("900000"));
+            await mock.approve(lockPayments.address, ethers.utils.parseEther("900000"));
+            let date = await getBlockTime() + 600;
+            // Creating batch 0
+            await lockPayments.createBatch([addr1.address, addr2.address, addr3.address], [ethers.utils.parseEther("100000"), ethers.utils.parseEther("100000"), ethers.utils.parseEther("100000")], date, mock.address);
+            await increaseTime(700);
+            await lockPayments.disperseBatch(0);
+            const actualBatchAttributes = await lockPayments.getBatchAttributes(0);
+            expect(actualBatchAttributes.state).to.equal(1);
+            expect(actualBatchAttributes.releasedDate).to.be.closeTo(ethers.BigNumber.from(await getBlockTime()), 50);
+            expect(await mock.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("100000"));
+            expect(await mock.balanceOf(addr2.address)).to.equal(ethers.utils.parseEther("100000"));
+            expect(await mock.balanceOf(addr3.address)).to.equal(ethers.utils.parseEther("100000"));
+            expect(await mock.balanceOf(lockPayments.address)).to.equals(0)
+
+        })
+
+    })
 })

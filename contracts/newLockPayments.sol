@@ -33,14 +33,6 @@ contract LockPayments is Ownable {
     mapping(uint256 => Batch) private batches;
 
     /*///////////////////////////////////////////////////////////////
-                    EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event BatchCreated(uint256 indexed batchId);
-    event BatchUpdate();
-    event OrderReleased(uint256 indexed batchId, address indexed receiver, uint256 indexed amount);
-
-    /*///////////////////////////////////////////////////////////////
                     VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -86,6 +78,7 @@ contract LockPayments is Ownable {
             batches[totalBatches].orders.set(addresses[i], amounts[i]);
             total += amounts[i];
         }
+        console.log(total);
         batches[totalBatches].dueDate = dueDate;
         batches[totalBatches].state = State.Pending;
         batches[totalBatches].creationDate = block.timestamp;
@@ -157,12 +150,12 @@ contract LockPayments is Ownable {
      * @param batchId The batch ID number
      */
     function disperseBatch(uint256 batchId) external {
-        require(batchId <= totalBatches, "Error: Invalid batchId (batch does not exist)");
-        require(batches[batchId].state != State.Removed || batches[batchId].state != State.Completed, "Error: Invalid batchId (batch removed or completed)");
+        require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
+        require(batches[batchId].state == State.Pending, "Error: Invalid batchId (batch removed or completed)");
         require(block.timestamp >= batches[batchId].dueDate, "Error: Batch due date not met");
         for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
             (address addr, uint256 amount) = batches[batchId].orders.at(i);
-            IERC20(batches[batchId].paymentToken).transferFrom(address(this), addr, amount);
+            IERC20(batches[batchId].paymentToken).transfer(addr, amount);
         }
         batches[batchId].state = State.Completed;
         batches[batchId].releasedDate = block.timestamp;
