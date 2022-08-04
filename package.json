@@ -3,7 +3,8 @@
   "scripts": {
     "test": "cross-env TS_NODE_TRANSPILE_ONLY=1 hardhat test",
     "clean": "rimraf artifacts/ cache/ coverage/ typechain-types/ coverage.json",
-    "build": "cross-env TS_NODE_TRANSPILE_ONLY=1 npm run clean && hardhat compile"
+    "build": "cross-env TS_NODE_TRANSPILE_ONLY=1 npm run clean && hardhat compile",
+    "coverage": "hardhat coverage"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.6.4",

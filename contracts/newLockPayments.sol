@@ -41,8 +41,7 @@ contract LockPayments is Ownable {
      * @notice Returns the attributes of a specific batch ID
      * @param batchId The batch ID number
      */
-    function getBatchAttributes(uint256 batchId) external view returns (address[] memory addresses, uint256[] memory amounts, uint256 dueDate, State state, uint256 creationDate, uint256 releasedDate) {
-        require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
+    function getBatchAttributes(uint256 batchId) external view returns (address[] memory addresses, uint256[] memory amounts, uint256 dueDate, State state, uint256 creationDate, uint256 releasedDate, address paymentToken) {
         addresses = new address[](batches[batchId].orders.length());
         amounts = new uint256[](batches[batchId].orders.length());
         for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
@@ -53,7 +52,8 @@ contract LockPayments is Ownable {
         dueDate = batches[batchId].dueDate;
         state = batches[batchId].state;
         creationDate = batches[batchId].creationDate;
-        releasedDate = batches[batchId].releasedDate; 
+        releasedDate = batches[batchId].releasedDate;
+        paymentToken = batches[batchId].paymentToken; 
     }
 
     /*///////////////////////////////////////////////////////////////
