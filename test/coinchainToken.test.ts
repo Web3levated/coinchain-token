@@ -48,6 +48,13 @@ describe("CoinchainToken", () => {
             await expect(coinchainToken.connect(addr1).transfer(addr2.address, ethers.utils.parseEther("100")))
                 .to.be.revertedWith("Token transfer amount exceeds limit");
         });
+        it("Should not revert if transaction does not exceed limit", async () => {
+            await coinchainToken.connect(receiver).transfer(addr1.address, ethers.utils.parseEther("100"));
+            await coinchainToken.setTransferLimit(ethers.utils.parseEther("101"));
+            await coinchainToken.setTransferLimitEnabled(true);
+            await expect(coinchainToken.connect(addr1).transfer(addr2.address, ethers.utils.parseEther("100")))
+                .to.not.be.reverted;
+        });
         it("Should not revert if flag is set to false", async () => {
             await coinchainToken.connect(receiver).transfer(addr1.address, ethers.utils.parseEther("100"));
             await coinchainToken.setTransferLimit(ethers.utils.parseEther("99"));
@@ -55,7 +62,6 @@ describe("CoinchainToken", () => {
             await expect(coinchainToken.connect(addr1).transfer(addr2.address, ethers.utils.parseEther("100")))
                 .to.not.be.reverted;
         });
-
     });
 
     describe("liquidity snipe protection", async () => {

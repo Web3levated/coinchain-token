@@ -1,89 +1,163 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+// SPDX-License-Identifier: MIT LICENSE
+
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
+import "hardhat/console.sol";
 
-contract LockPayments is Ownable{
-     
-    enum State { Pending, Completed, Released, Reverted }
-      
-    struct Order {
-        uint256 orderId;
-        address manager;
+contract LockPayments is Ownable {
+    using EnumerableMap for EnumerableMap.AddressToUintMap;
+
+    /*///////////////////////////////////////////////////////////////
+                    DATA STRUCTURES 
+    //////////////////////////////////////////////////////////////*/
+
+    enum State { Pending, Completed, Removed }
+
+    struct Batch {
+        EnumerableMap.AddressToUintMap orders;
         uint256 dueDate;
-        address paymentToken;
-        uint256 amount;
         State state;
-        uint256 createdAt;
-        uint256 completedAt;
-        uint256 releasedAt;
-     }
-    
-    uint256 private totalOrders=0;
-
-    mapping(uint256 => Order) orders;
-
-    modifier condition(bool _condition, string memory message) {
-        require(_condition, message);
-        _;
+        uint256 creationDate;
+        uint256 releasedDate;
+        address paymentToken;
     }
 
-    event OrderCreated(
-        uint256 orderId
-  );
+    /*///////////////////////////////////////////////////////////////
+                    GLOBAL STATE
+    //////////////////////////////////////////////////////////////*/
 
-    event OrderCompleted(uint256 orderId,address indexed caller);
-    event OrderReverted(uint256 orderId,address indexed caller);
-    event OrderCompletedAndReleased(uint256 orderId,address indexed caller);
+    uint256 public totalBatches = 0;
+    mapping(uint256 => Batch) private batches;
 
-    function createAndDeposit(address managerAddress, uint256 dueDateTimestamp, address _paymentToken, uint256 _amount) 
-        public 
-        condition(managerAddress != _msgSender(), "Error: check manager address")
-        condition(dueDateTimestamp > block.timestamp, "Error: Invalid Due date")
-        condition(_amount > 0, "Error: Invalid amount")
-         returns(bool)
-    {
-           totalOrders +=1;       
-           Order storage order = orders[totalOrders];
-           order.orderId = totalOrders;
-           order.manager = managerAddress;
-           order.dueDate = dueDateTimestamp;
-           order.paymentToken = _paymentToken;
-           order.state = State.Pending;
-           order.amount = _amount;
-           order.createdAt = block.timestamp;
-            
-           IERC20(_paymentToken).transferFrom(_msgSender(), address(this),_amount);
- 
-           emit OrderCreated(totalOrders);         
-           return true;  
-    }   
+    /*///////////////////////////////////////////////////////////////
+                    VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
-    // distribute funds with single transaction vs allowing claims
-    function claimFunds(uint256 orderId)
-        public
-        condition((orders[orderId].manager==_msgSender()||_msgSender()== owner()), "Error: Must be the manager or owner")   
-        condition(((orders[orderId].state==State.Completed)||(orders[orderId].state==State.Pending)), "Error: Invalid current state")   
-        condition((orders[orderId].dueDate <= block.timestamp), "Error: Cannot claim funds before dueDate")  
-     {
-        Order storage order = orders[orderId];    
-        order.releasedAt = block.timestamp;
-        order.state = State.Released;
-      
-        emit OrderCompletedAndReleased(orderId,_msgSender());
-
-        IERC20(order.paymentToken).transfer(order.manager, order.amount);
-
+    /**
+     * @dev 
+     * @notice Returns the attributes of a specific batch ID
+     * @param batchId The batch ID number
+     */
+    function getBatchAttributes(uint256 batchId) external view returns (address[] memory addresses, uint256[] memory amounts, uint256 dueDate, State state, uint256 creationDate, uint256 releasedDate, address paymentToken) {
+        addresses = new address[](batches[batchId].orders.length());
+        amounts = new uint256[](batches[batchId].orders.length());
+        for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
+            (address addr, uint256 amount) = batches[batchId].orders.at(i);
+            addresses[i] = addr;
+            amounts[i] = amount;    
+        }
+        dueDate = batches[batchId].dueDate;
+        state = batches[batchId].state;
+        creationDate = batches[batchId].creationDate;
+        releasedDate = batches[batchId].releasedDate;
+        paymentToken = batches[batchId].paymentToken; 
     }
-       
-    
-    function orderDetails(uint256 orderId)
-        public view
-        // condition((orders[orderId].manager==_msgSender()||_msgSender()== owner() || orders[orderId].buyer==_msgSender()), "Error: Caller not seller/buyer/owner")   
-        returns (address manager, address paymentToken, State state, uint256 dueDate, uint256 amount, uint256 createdAt, uint256 releasedAt,uint256 completedAt)
-      {
-        Order memory order = orders[orderId];       
-        return (order.manager, order.paymentToken, order.state, order.dueDate, order.amount, order.createdAt, order.releasedAt, order.completedAt);
+
+    /*///////////////////////////////////////////////////////////////
+                    PUBLIC FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev 
+     * @notice Creates a new batch with specified attributes
+     * @param addresses The list of addresses that will receive tokens
+     * @param amounts The list of token ammounts that will be distributed with respect to the list of addresses
+     * @param dueDate The date which tokens are unlocked and can be dispersed
+     * @param paymentToken The token address of token to lock up and disperse
+     */
+    function createBatch(address[] memory addresses, uint256[] memory amounts, uint256 dueDate, address paymentToken) external onlyOwner {
+        require(dueDate > block.timestamp, "Error: Invalid Due Date");
+        require(addresses.length == amounts.length, "Error: length of addresses and amounts must be equal");
+        uint256 total;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            require(amounts[i] > 0, "Error: Invalid amount");
+            require(addresses[i] != address(0), "Error: Address cannot be zero address");
+            batches[totalBatches].orders.set(addresses[i], amounts[i]);
+            total += amounts[i];
+        }
+        batches[totalBatches].dueDate = dueDate;
+        batches[totalBatches].state = State.Pending;
+        batches[totalBatches].creationDate = block.timestamp;
+        batches[totalBatches].paymentToken = paymentToken;
+        IERC20(paymentToken).transferFrom(msg.sender, address(this), total);
+        totalBatches += 1;
     }
+
+    /**
+     * @dev 
+     * @notice Adds the addresses/amounts passed to the enumerableMap (order) in the batch
+     * @param batchId The batch ID number
+     * @param addresses The list of addresses that will receive tokens
+     * @param amounts The list of token ammounts that will be distributed with respect to the list of addresses
+     */
+    function addOrderToBatch(uint256 batchId, address[] memory addresses, uint256[] memory amounts) external onlyOwner {
+        require(addresses.length == amounts.length, "Error: length of addresses and amounts must be equal");
+        require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
+        uint256 total;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            require(amounts[i] > 0, "Error: Invalid amount");
+            require(addresses[i] != address(0), "Error: Address cannot be zero address");
+            batches[batchId].orders.set(addresses[i], amounts[i]);
+            total += amounts[i];
+        }
+        IERC20(batches[batchId].paymentToken).transferFrom(msg.sender, address(this), total);
+    }
+
+    /**
+     * @dev 
+     * @notice Removes the addresses/amounts passed from the enumerableMap (order) in the batch
+     * @param batchId The batch ID number
+     * @param addresses The list of addresses that will receive tokens
+     */
+    function removeOrderFromBatch(uint256 batchId, address[] memory addresses) external onlyOwner {
+        require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
+        uint256 total;
+        for (uint256 i = 0; i < addresses.length; i++) {
+            total += batches[batchId].orders.get(addresses[i]);
+            batches[batchId].orders.remove(addresses[i]);
+        }
+        IERC20(batches[batchId].paymentToken).transfer(msg.sender, total);
+    }
+
+    /**
+     * @dev "Removes" a batch from batches
+     *
+     * Solidity does not support deletion of structs with enumerableMaps so
+     * we are clearing all orders and attributes with 0 and changing state
+     * to "Removed" preventing batch from being dispersed 
+     *
+     * @notice Updates an existing batch with specified attributes
+     * @param batchId The batch ID number
+     */
+    function removeBatch(uint256 batchId) external onlyOwner {
+        require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
+        uint256 total;
+        for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
+            (address addr, uint256 amount) = batches[batchId].orders.at(i);
+            total += amount;    
+        }
+        batches[batchId].state = State.Removed;
+        IERC20(batches[batchId].paymentToken).transfer(msg.sender, total);
+    }
+
+    /**
+     * @dev
+     * @notice Disperses respective token amounts to the addresses in the batch if due date is passed
+     * @param batchId The batch ID number
+     */
+    function disperseBatch(uint256 batchId) external {
+        require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
+        require(batches[batchId].state == State.Pending, "Error: Invalid batchId (batch removed or completed)");
+        require(block.timestamp >= batches[batchId].dueDate, "Error: Batch due date not met");
+        for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
+            (address addr, uint256 amount) = batches[batchId].orders.at(i);
+            IERC20(batches[batchId].paymentToken).transfer(addr, amount);
+        }
+        batches[batchId].state = State.Completed;
+        batches[batchId].releasedDate = block.timestamp;
+    }
+
 }
