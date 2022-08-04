@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
-import "hardhat/console.sol";
 
 contract LockPayments is Ownable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
@@ -37,7 +36,6 @@ contract LockPayments is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev 
      * @notice Returns the attributes of a specific batch ID
      * @param batchId The batch ID number
      */
@@ -61,7 +59,6 @@ contract LockPayments is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev 
      * @notice Creates a new batch with specified attributes
      * @param addresses The list of addresses that will receive tokens
      * @param amounts The list of token ammounts that will be distributed with respect to the list of addresses
@@ -87,7 +84,6 @@ contract LockPayments is Ownable {
     }
 
     /**
-     * @dev 
      * @notice Adds the addresses/amounts passed to the enumerableMap (order) in the batch
      * @param batchId The batch ID number
      * @param addresses The list of addresses that will receive tokens
@@ -107,7 +103,6 @@ contract LockPayments is Ownable {
     }
 
     /**
-     * @dev 
      * @notice Removes the addresses/amounts passed from the enumerableMap (order) in the batch
      * @param batchId The batch ID number
      * @param addresses The list of addresses that will receive tokens
@@ -126,8 +121,8 @@ contract LockPayments is Ownable {
      * @dev "Removes" a batch from batches
      *
      * Solidity does not support deletion of structs with enumerableMaps so
-     * we are clearing all orders and attributes with 0 and changing state
-     * to "Removed" preventing batch from being dispersed 
+     * we are changing state to "Removed" preventing batch from being 
+     * dispersed 
      *
      * @notice Updates an existing batch with specified attributes
      * @param batchId The batch ID number
@@ -144,8 +139,9 @@ contract LockPayments is Ownable {
     }
 
     /**
-     * @dev
-     * @notice Disperses respective token amounts to the addresses in the batch if due date is passed
+     * @notice Disperses respective token amounts to the addresses in the batch 
+     * if due date is passed
+     * 
      * @param batchId The batch ID number
      */
     function disperseBatch(uint256 batchId) external {
