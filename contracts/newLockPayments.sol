@@ -78,7 +78,6 @@ contract LockPayments is Ownable {
             batches[totalBatches].orders.set(addresses[i], amounts[i]);
             total += amounts[i];
         }
-        console.log(total);
         batches[totalBatches].dueDate = dueDate;
         batches[totalBatches].state = State.Pending;
         batches[totalBatches].creationDate = block.timestamp;
