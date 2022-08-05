@@ -14,15 +14,15 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
                     GLOBAL STATE
     //////////////////////////////////////////////////////////////*/
 
-    // boolean to control whether transfer limit is active
+    // Boolean to control whether transfer limit is active
     bool public transferLimitEnabled;
-    // maximum amount of tokens that can be transfered when transfer limit is active. used to mitigate bot impact
+    // Maximum amount of tokens that can be transfered when transfer limit is active. used to mitigate bot impact
     uint256 public transferLimit;
-    // address of the uniswap pair
+    // Address of the uniswap pair
     address public pairAddress;
-    // block number when initial liquidity added to uniswap used to disable transfers within the same block as liquidity add
+    // Block number when initial liquidity added to uniswap used to disable transfers within the same block as liquidity add
     uint256 public liqAddBlock;
-    // private boolean to that liquidity bot protection is only activated on initial liquidity add
+    // Private boolean so that liquidity bot protection is only activated on initial liquidity add
     bool private isLiquidityAdded; 
 
 
@@ -31,12 +31,12 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     //////////////////////////////////////////////////////////////*/
 
     /**
-     *  @notice constructor
-     *  @param _name name of the token
-     *  @param _symbol symbol for the token
-     *  @param _initialSupply number of tokens that will be minted to owner wallet on creation
-     *  @param WETH address of wrapped ETH used to compute uniswap pair address
-     *  @param tokenReceiver address to mint initial supply to and grant default admin role
+     *  @notice Constructor
+     *  @param _name Name of the token
+     *  @param _symbol Symbol for the token
+     *  @param _initialSupply Number of tokens that will be minted to owner wallet on creation
+     *  @param WETH Address of wrapped ETH used to compute uniswap pair address
+     *  @param tokenReceiver Address to mint initial supply to and grant default admin role
      */
     constructor(
         string memory _name,
@@ -56,9 +56,9 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     //////////////////////////////////////////////////////////////*/
 
     /**
-     *  @notice mint function that can only be called by authorized address
-     *  @param to address to mint the tokens to
-     *  @param amount amount of tokens to mint
+     *  @notice Mint function that can only be called by authorized address
+     *  @param to Address to mint the tokens to
+     *  @param amount Amount of tokens to mint
      */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE){
         _mint(to, amount);
@@ -69,9 +69,9 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     //////////////////////////////////////////////////////////////*/
 
     /**
-     *  @notice helper function to generate uniswap pair address
-     *  @param token0 address of first token in pair
-     *  @param token1 address of second token in pair
+     *  @notice Helper function to generate uniswap pair address
+     *  @param token0 Address of first token in pair
+     *  @param token1 Address of second token in pair
      *  @return address of uniswap pair 
      */
     function generatePairAddress(address token0, address token1) internal pure returns(address){
@@ -89,48 +89,52 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     //////////////////////////////////////////////////////////////*/
 
     /**
-     *  @notice sets the max transfer limit
-     *  @param _transferLimit new transfer limit to be set
+     *  @notice Sets the max transfer limit
+     *  @param _transferLimit New transfer limit to be set
      */
     function setTransferLimit(uint256 _transferLimit) external onlyRole(OPERATOR_ROLE){
         transferLimit = _transferLimit;
     }
 
     /**
-     *  @notice sets the boolean to enable and disable transfer limit 
-     *  @param _transferLimitEnabled boolean for which to set the transferLimitEnabled flag
+     *  @notice Sets the boolean to enable and disable transfer limit 
+     *  @param _transferLimitEnabled Boolean for which to set the transferLimitEnabled flag
      */
     function setTransferLimitEnabled(bool _transferLimitEnabled) external onlyRole(OPERATOR_ROLE){
         transferLimitEnabled = _transferLimitEnabled;
     }
 
     /**
-     * @notice grants the MINTER_ROLE to given account
-     * @param _account address to grant the MINTER_ROLE to
+     * @dev Calls the public grantRole() function which verifies that the sender is a role admin
+     * @notice Grants the MINTER_ROLE to given account
+     * @param _account Address to grant the MINTER_ROLE to
      */
     function grantMinterRole(address _account) external {
         grantRole(MINTER_ROLE, _account);
     }
 
     /**
-     * @notice revokes the MINTER_ROLE from given account
-     * @param _account address to revoke the MINTER_ROLE from 
+     * @dev Calls the public revokeRole() function which verifies that the sender is a role admin
+     * @notice Revokes the MINTER_ROLE from given account
+     * @param _account Address to revoke the MINTER_ROLE from 
      */
     function revokeMinterRole(address _account) external {
         revokeRole(MINTER_ROLE, _account);
     }
 
     /**
-     * @notice grants the OPERATOR_ROLE to given account
-     * @param _account address to grant the OPERATOR_ROLE to
+     * @dev Calls the public grantRole() function which verifies that the sender is a role admin
+     * @notice Grants the OPERATOR_ROLE to given account
+     * @param _account Address to grant the OPERATOR_ROLE to
      */
     function grantOperatorRole(address _account) external {
         grantRole(OPERATOR_ROLE, _account);
     }
 
     /**
-     * @notice revokes the OPERATOR_ROLE from given account
-     * @param _account address to revoke the OPERATOR_ROLE from 
+     * @dev Calls the public revokeRole() function which verifies that the sender is a role admin
+     * @notice Revokes the OPERATOR_ROLE from given account
+     * @param _account Address to revoke the OPERATOR_ROLE from 
      */
     function revokeOperatorRole(address _account) external {
         revokeRole(OPERATOR_ROLE, _account);
