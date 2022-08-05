@@ -1,7 +1,7 @@
 # CoinChain Token
 
 ## INTRODUCTION
-Hardhat project that contains the contract, unit tests and relevant scripts for the CoinChain token and LockPayments contracts. The CoinchainToken contract is an ERC20 token with anti-bot measures implemented and role-based access control to protect sensitive functions. The LockPayments contract is designed to lock core team tokens for a certain vesting period before they can be released to their respective owners and is managed in batches of orders that contain addresses and amounts with a respective due date when the tokens can be released.
+Hardhat project that contains the contracts, unit tests and relevant scripts for the CoinChain token and LockPayments contracts. The CoinchainToken contract is an ERC20 token with anti-bot measures implemented and role-based access control to protect sensitive functions. The LockPayments contract is designed to lock core team tokens for a certain vesting period before they can be released to their respective owners and is managed in batches of orders that contain addresses and amounts with a respective due date when the tokens can be released.
 
 ## REQUIREMENTS
 Nodejs and Node Package Manager(npm)
@@ -21,7 +21,7 @@ npm install
 ### Coverage
 `npm run coverage`
 - runs [solidity-coverage](https://github.com/sc-forks/solidity-coverage) plugin
-- generates coverage folder with full test coverage report
+- generates coverage folder in the projects root directory with full test coverage report
 
 ## HARDHAT SCRIPTS
 - hardhat scripts used to interact with deployed smart contracts
@@ -30,12 +30,12 @@ npm install
 ### CoinChainToken
 #### token scripts are stored in scripts/coinchainToken
 - [deployToken.ts](scripts/coinchainToken/deployToken.ts)
-    - deploys CoinchainToken.sol to chosen network and writes contract address to console
+    - deploys [CoinchainToken.sol](contracts/CoinchainToken.sol) to chosen network and writes contract address to console
     - verifies contract in etherscan
 ### LockPayments
 #### lock payments scripts are stored in scripts/lockPayments
 - [deployLockPayments.ts](scripts/lockPayments/deployLockPayments.ts)
-    - deploys LockPayments.sol to chosen network and writes contract addres to console
+    - deploys [LockPayments.sol](contracts/LockPayments.sol) to chosen network and writes contract addres to console
     - verifies contract in etherscan
 - [createBatches.ts](scripts/lockPayments/createBatches.ts)
     - reades batches.json file for batch information and calls createBatch()
