@@ -38,6 +38,13 @@ contract LockPayments is Ownable {
     /**
      * @notice Returns the attributes of a specific batch ID
      * @param batchId The batch ID number
+     * @return addresses List of addresses in a batch
+     * @return amounts List of amounts in a batch
+     * @return dueDate Date at whcih batch can be dispersed
+     * @return state Current state of a batch
+     * @return creationDate Date batch was created
+     * @return releasedDate Date batch was released/dispersed
+     * @return paymentToken Payment token of batch
      */
     function getBatchAttributes(uint256 batchId) external view returns (address[] memory addresses, uint256[] memory amounts, uint256 dueDate, State state, uint256 creationDate, uint256 releasedDate, address paymentToken) {
         addresses = new address[](batches[batchId].orders.length());
