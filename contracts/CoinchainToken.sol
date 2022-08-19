@@ -32,19 +32,19 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
 
     /**
      *  @notice Constructor
-     *  @param _name Name of the token
-     *  @param _symbol Symbol for the token
+     *  @param name_ Name of the token
+     *  @param symbol_ Symbol for the token
      *  @param _initialSupply Number of tokens that will be minted to owner wallet on creation
      *  @param WETH Address of wrapped ETH used to compute uniswap pair address
      *  @param tokenReceiver Address to mint initial supply to and grant default admin role
      */
     constructor(
-        string memory _name,
-        string memory _symbol,
+        string memory name_,
+        string memory symbol_,
         uint256 _initialSupply,
         address WETH,
         address tokenReceiver
-    ) ERC20(_name, _symbol){
+    ) ERC20(name_, symbol_){
         _setupRole(DEFAULT_ADMIN_ROLE, tokenReceiver);
         _setupRole(OPERATOR_ROLE, msg.sender);
         pairAddress = generatePairAddress(address(this), WETH);
@@ -154,6 +154,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
             require(amount <= transferLimit, "Token transfer amount exceeds limit");
         }
         if(pairAddress != address(0) && !isLiquidityAdded && to == pairAddress){
+            isLiquidityAdded = true;
             liqAddBlock = block.number;
         }
         super._beforeTokenTransfer(from, to, amount);
