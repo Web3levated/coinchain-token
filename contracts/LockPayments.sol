@@ -79,14 +79,14 @@ contract LockPayments is Ownable {
         for (uint256 i = 0; i < amounts.length; i++) {
             require(amounts[i] > 0, "Error: Invalid amount");
             require(addresses[i] != address(0), "Error: Address cannot be zero address");
-            batches[totalBatches].orders.set(addresses[i], amounts[i]);
+            require(batches[totalBatches].orders.set(addresses[i], amounts[i]));
             total += amounts[i];
         }
         batches[totalBatches].dueDate = dueDate;
         batches[totalBatches].state = State.Pending;
         batches[totalBatches].creationDate = block.timestamp;
         batches[totalBatches].paymentToken = paymentToken;
-        IERC20(paymentToken).transferFrom(msg.sender, address(this), total);
+        require(IERC20(paymentToken).transferFrom(msg.sender, address(this), total));
         totalBatches += 1;
     }
 
@@ -103,10 +103,10 @@ contract LockPayments is Ownable {
         for (uint256 i = 0; i < amounts.length; i++) {
             require(amounts[i] > 0, "Error: Invalid amount");
             require(addresses[i] != address(0), "Error: Address cannot be zero address");
-            batches[batchId].orders.set(addresses[i], amounts[i]);
+            require(batches[batchId].orders.set(addresses[i], amounts[i]));
             total += amounts[i];
         }
-        IERC20(batches[batchId].paymentToken).transferFrom(msg.sender, address(this), total);
+        require(IERC20(batches[batchId].paymentToken).transferFrom(msg.sender, address(this), total));
     }
 
     /**
@@ -121,7 +121,7 @@ contract LockPayments is Ownable {
             total += batches[batchId].orders.get(addresses[i]);
             batches[batchId].orders.remove(addresses[i]);
         }
-        IERC20(batches[batchId].paymentToken).transfer(msg.sender, total);
+        require(IERC20(batches[batchId].paymentToken).transfer(msg.sender, total));
     }
 
     /**
@@ -142,7 +142,7 @@ contract LockPayments is Ownable {
             total += amount;    
         }
         batches[batchId].state = State.Removed;
-        IERC20(batches[batchId].paymentToken).transfer(msg.sender, total);
+        require(IERC20(batches[batchId].paymentToken).transfer(msg.sender, total));
     }
 
     /**
@@ -157,7 +157,7 @@ contract LockPayments is Ownable {
         require(block.timestamp >= batches[batchId].dueDate, "Error: Batch due date not met");
         for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
             (address addr, uint256 amount) = batches[batchId].orders.at(i);
-            IERC20(batches[batchId].paymentToken).transfer(addr, amount);
+            require(IERC20(batches[batchId].paymentToken).transfer(addr, amount));
         }
         batches[batchId].state = State.Completed;
         batches[batchId].releasedDate = block.timestamp;
