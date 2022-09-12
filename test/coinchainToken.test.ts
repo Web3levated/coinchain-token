@@ -8,6 +8,8 @@ import { keccak256 } from "ethers/lib/utils";
 import { config } from "dotenv";
 
 
+const initialSupply = ethers.utils.parseEther("200000000");
+const maxSupply = ethers.utils.parseEther("400000000")
 describe("CoinchainToken", () => {
     let coinchainToken: CoinchainToken;
     let [deployer, addr1, addr2, mockPair, receiver]: SignerWithAddress[] = [];
@@ -17,7 +19,7 @@ describe("CoinchainToken", () => {
 
         coinchainToken = await(
             await ethers.getContractFactory("CoinchainToken")
-        ).deploy("Coinchain", "CCH", ethers.utils.parseEther("200000000"), mockPair.address, receiver.address);
+        ).deploy("Coinchain", "CCH", initialSupply, maxSupply, mockPair.address, receiver.address);
         await coinchainToken.deployed();
     })
 
@@ -32,7 +34,8 @@ describe("CoinchainToken", () => {
             expect(await coinchainToken.name()).to.equal("Coinchain");
             expect(await coinchainToken.symbol()).to.equal("CCH");
             expect(await coinchainToken.decimals()).to.equal(18);
-            expect(await coinchainToken.totalSupply()).to.equal(ethers.utils.parseEther("200000000"));
+            expect(await coinchainToken.totalSupply()).to.equal(initialSupply);
+            expect(await coinchainToken.maxSupply()).to.equal(maxSupply);
             expect(await coinchainToken.balanceOf(receiver.address)).to.equal(ethers.utils.parseEther("200000000"));
             expect(await coinchainToken.pairAddress()).to.equal(expectedPairAddress);
             expect(await coinchainToken.hasRole(await coinchainToken.DEFAULT_ADMIN_ROLE(), receiver.address)).to.be.true;
@@ -107,10 +110,21 @@ describe("CoinchainToken", () => {
                 .to.be.reverted;
         })
 
+        it("Should revert if mint amount exceeds maxSupply", async () => {
+            await coinchainToken.connect(receiver).grantRole(await coinchainToken.MINTER_ROLE(), addr1.address);
+            await expect(coinchainToken.connect(addr1).mint(addr1.address, maxSupply.sub(initialSupply).add(1))).to.be.revertedWith("Mint amount would exceed maximum supply");
+        })
+
         it("Should mint 1000000 tokens to given address", async () => {
             await coinchainToken.connect(receiver).grantRole(await coinchainToken.MINTER_ROLE(), addr1.address);
             await coinchainToken.connect(addr1).mint(addr1.address, ethers.utils.parseEther("1000000"));
             expect(await coinchainToken.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("1000000"));
+        })
+
+        it("Should mint maximum suppy of tokens", async () => {
+            await coinchainToken.connect(receiver).grantRole(await coinchainToken.MINTER_ROLE(), addr1.address);
+            await coinchainToken.connect(addr1).mint(addr1.address, maxSupply.sub(initialSupply));
+            expect( await coinchainToken.totalSupply() ).to.equal(maxSupply);
         })
 
     })
