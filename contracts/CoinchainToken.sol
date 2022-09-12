@@ -27,7 +27,12 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     // maximum supply of tokens that can be minted
     uint256 public maxSupply;
 
+  /*///////////////////////////////////////////////////////////////
+                    EVENTS
+    //////////////////////////////////////////////////////////////*/
 
+    event TransferLimitEnabled(bool indexed _transferLimitEnabled);
+    event TransferLimitSet(uint256 amount);    
 
   /*///////////////////////////////////////////////////////////////
                     CONSTRUCTOR
@@ -100,6 +105,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      */
     function setTransferLimit(uint256 _transferLimit) external onlyRole(OPERATOR_ROLE){
         transferLimit = _transferLimit;
+        emit TransferLimitSet(_transferLimit);
     }
 
     /**
@@ -108,6 +114,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      */
     function setTransferLimitEnabled(bool _transferLimitEnabled) external onlyRole(OPERATOR_ROLE){
         transferLimitEnabled = _transferLimitEnabled;
+        emit TransferLimitEnabled(_transferLimitEnabled);
     }
 
     /**

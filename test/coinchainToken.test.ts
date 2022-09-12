@@ -65,6 +65,22 @@ describe("CoinchainToken", () => {
             await expect(coinchainToken.connect(addr1).transfer(addr2.address, ethers.utils.parseEther("100")))
                 .to.not.be.reverted;
         });
+        it("Should emit event when transfer limit is enabled or disabled", async () => {
+            await expect( coinchainToken.setTransferLimitEnabled(true)).to.emit(
+                coinchainToken,
+                "TransferLimitEnabled"
+            ).withArgs(true);
+            await expect( coinchainToken.setTransferLimitEnabled(false)).to.emit(
+                coinchainToken,
+                "TransferLimitEnabled"
+            ).withArgs(false)
+        })
+        it("Should emit event when transfer limit is set", async () => {
+            await expect( coinchainToken.setTransferLimit(ethers.utils.parseEther("99")) ).to.emit(
+                coinchainToken,
+                "TransferLimitSet"
+            ).withArgs( ethers.utils.parseEther("99") )
+        })
     });
 
     describe("liquidity snipe protection", async () => {
