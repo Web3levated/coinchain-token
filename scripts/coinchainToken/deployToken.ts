@@ -9,6 +9,7 @@ async function main(){
     const tokenName = "";
     const tokenSymbol = "";
     const initialSupply = ethers.utils.parseEther("200000000");
+    const maxSupply = ethers.utils.parseEther("400000000");
 
     
     const router = new ethers.Contract(routerAddress, UniswapRouterABI, signer);
@@ -17,7 +18,7 @@ async function main(){
 
     const coinchainToken = await (
         await ethers.getContractFactory("CoinchainToken")
-    ).deploy(tokenName, tokenSymbol, initialSupply, WETHAddress, receiverAddress);
+    ).deploy(tokenName, tokenSymbol, initialSupply, maxSupply, WETHAddress, receiverAddress);
     await coinchainToken.deployed();
     console.log("coinchainTokenAddress: ", coinchainToken.address);
 

@@ -24,7 +24,15 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     uint256 public liqAddBlock;
     // Private boolean so that liquidity bot protection is only activated on initial liquidity add
     bool private isLiquidityAdded; 
+    // maximum supply of tokens that can be minted
+    uint256 public immutable maxSupply;
 
+  /*///////////////////////////////////////////////////////////////
+                    EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event TransferLimitEnabled(bool indexed _transferLimitEnabled);
+    event TransferLimitSet(uint256 amount);    
 
   /*///////////////////////////////////////////////////////////////
                     CONSTRUCTOR
@@ -42,12 +50,14 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
         string memory name_,
         string memory symbol_,
         uint256 _initialSupply,
+        uint256 _maxSupply,
         address WETH,
         address tokenReceiver
     ) ERC20(name_, symbol_){
         _setupRole(DEFAULT_ADMIN_ROLE, tokenReceiver);
         _setupRole(OPERATOR_ROLE, msg.sender);
         pairAddress = generatePairAddress(address(this), WETH);
+        maxSupply = _maxSupply;
         _mint(tokenReceiver, _initialSupply);
     }
 
@@ -61,6 +71,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      *  @param amount Amount of tokens to mint
      */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE){
+        require(totalSupply() + amount <= maxSupply, "Mint amount would exceed maximum supply");
         _mint(to, amount);
     }
 
@@ -94,6 +105,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      */
     function setTransferLimit(uint256 _transferLimit) external onlyRole(OPERATOR_ROLE){
         transferLimit = _transferLimit;
+        emit TransferLimitSet(_transferLimit);
     }
 
     /**
@@ -102,6 +114,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      */
     function setTransferLimitEnabled(bool _transferLimitEnabled) external onlyRole(OPERATOR_ROLE){
         transferLimitEnabled = _transferLimitEnabled;
+        emit TransferLimitEnabled(_transferLimitEnabled);
     }
 
     /**
