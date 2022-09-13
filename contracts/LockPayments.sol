@@ -21,7 +21,6 @@ contract LockPayments is Ownable {
         State state;
         uint256 creationDate;
         uint256 releasedDate;
-        address paymentToken;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -29,7 +28,16 @@ contract LockPayments is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     uint256 public totalBatches = 0;
+    address public coinchainToken;
     mapping(uint256 => Batch) private batches;
+
+    /*///////////////////////////////////////////////////////////////
+                    CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    constructor( address _coinchainToken ){
+        coinchainToken = _coinchainToken;
+    }
 
     /*///////////////////////////////////////////////////////////////
                     VIEW FUNCTIONS
@@ -44,9 +52,8 @@ contract LockPayments is Ownable {
      * @return state Current state of a batch
      * @return creationDate Date batch was created
      * @return releasedDate Date batch was released/dispersed
-     * @return paymentToken Payment token of batch
      */
-    function getBatchAttributes(uint256 batchId) external view returns (address[] memory addresses, uint256[] memory amounts, uint256 dueDate, State state, uint256 creationDate, uint256 releasedDate, address paymentToken) {
+    function getBatchAttributes(uint256 batchId) external view returns (address[] memory addresses, uint256[] memory amounts, uint256 dueDate, State state, uint256 creationDate, uint256 releasedDate) {
         addresses = new address[](batches[batchId].orders.length());
         amounts = new uint256[](batches[batchId].orders.length());
         for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
@@ -58,7 +65,6 @@ contract LockPayments is Ownable {
         state = batches[batchId].state;
         creationDate = batches[batchId].creationDate;
         releasedDate = batches[batchId].releasedDate;
-        paymentToken = batches[batchId].paymentToken; 
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -70,9 +76,8 @@ contract LockPayments is Ownable {
      * @param addresses The list of addresses that will receive tokens
      * @param amounts The list of token ammounts that will be distributed with respect to the list of addresses
      * @param dueDate The date which tokens are unlocked and can be dispersed
-     * @param paymentToken The token address of token to lock up and disperse
      */
-    function createBatch(address[] memory addresses, uint256[] memory amounts, uint256 dueDate, address paymentToken) external onlyOwner {
+    function createBatch(address[] memory addresses, uint256[] memory amounts, uint256 dueDate) external onlyOwner {
         require(dueDate > block.timestamp, "Error: Invalid Due Date");
         require(addresses.length == amounts.length, "Error: length of addresses and amounts must be equal");
         uint256 total;
@@ -85,8 +90,7 @@ contract LockPayments is Ownable {
         batches[totalBatches].dueDate = dueDate;
         batches[totalBatches].state = State.Pending;
         batches[totalBatches].creationDate = block.timestamp;
-        batches[totalBatches].paymentToken = paymentToken;
-        require(IERC20(paymentToken).transferFrom(msg.sender, address(this), total));
+        require(IERC20(coinchainToken).transferFrom(msg.sender, address(this), total));
         totalBatches += 1;
     }
 
@@ -106,7 +110,7 @@ contract LockPayments is Ownable {
             require(batches[batchId].orders.set(addresses[i], amounts[i]));
             total += amounts[i];
         }
-        require(IERC20(batches[batchId].paymentToken).transferFrom(msg.sender, address(this), total));
+        require(IERC20(coinchainToken).transferFrom(msg.sender, address(this), total));
     }
 
     /**
@@ -121,7 +125,7 @@ contract LockPayments is Ownable {
             total += batches[batchId].orders.get(addresses[i]);
             batches[batchId].orders.remove(addresses[i]);
         }
-        require(IERC20(batches[batchId].paymentToken).transfer(msg.sender, total));
+        require(IERC20(coinchainToken).transfer(msg.sender, total));
     }
 
     /**
@@ -142,7 +146,7 @@ contract LockPayments is Ownable {
             total += amount;    
         }
         batches[batchId].state = State.Removed;
-        require(IERC20(batches[batchId].paymentToken).transfer(msg.sender, total));
+        require(IERC20(coinchainToken).transfer(msg.sender, total));
     }
 
     /**
@@ -157,7 +161,7 @@ contract LockPayments is Ownable {
         require(block.timestamp >= batches[batchId].dueDate, "Error: Batch due date not met");
         for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
             (address addr, uint256 amount) = batches[batchId].orders.at(i);
-            require(IERC20(batches[batchId].paymentToken).transfer(addr, amount));
+            require(IERC20(coinchainToken).transfer(addr, amount));
         }
         batches[batchId].state = State.Completed;
         batches[batchId].releasedDate = block.timestamp;

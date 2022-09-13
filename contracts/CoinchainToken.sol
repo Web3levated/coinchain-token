@@ -25,7 +25,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     // Private boolean so that liquidity bot protection is only activated on initial liquidity add
     bool private isLiquidityAdded; 
     // maximum supply of tokens that can be minted
-    uint256 public maxSupply;
+    uint256 public immutable maxSupply;
 
   /*///////////////////////////////////////////////////////////////
                     EVENTS
@@ -71,7 +71,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      *  @param amount Amount of tokens to mint
      */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE){
-        require(amount + totalSupply() <= maxSupply, "Mint amount would exceed maximum supply");
+        require(totalSupply() + amount <= maxSupply, "Mint amount would exceed maximum supply");
         _mint(to, amount);
     }
 
