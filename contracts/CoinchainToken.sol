@@ -24,8 +24,7 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     uint256 public liqAddBlock;
     // Private boolean so that liquidity bot protection is only activated on initial liquidity add
     bool private isLiquidityAdded; 
-    // maximum supply of tokens that can be minted
-    uint256 public immutable maxSupply;
+
 
   /*///////////////////////////////////////////////////////////////
                     EVENTS
@@ -42,37 +41,21 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
      *  @notice Constructor
      *  @param name_ Name of the token
      *  @param symbol_ Symbol for the token
-     *  @param _initialSupply Number of tokens that will be minted to owner wallet on creation
+     *  @param _totalSupply Number of tokens that will be minted to owner wallet on creation
      *  @param WETH Address of wrapped ETH used to compute uniswap pair address
      *  @param tokenReceiver Address to mint initial supply to and grant default admin role
      */
     constructor(
         string memory name_,
         string memory symbol_,
-        uint256 _initialSupply,
-        uint256 _maxSupply,
+        uint256 _totalSupply,
         address WETH,
         address tokenReceiver
     ) ERC20(name_, symbol_){
         _setupRole(DEFAULT_ADMIN_ROLE, tokenReceiver);
         _setupRole(OPERATOR_ROLE, msg.sender);
         pairAddress = generatePairAddress(address(this), WETH);
-        maxSupply = _maxSupply;
-        _mint(tokenReceiver, _initialSupply);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                   MINTING FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     *  @notice Mint function that can only be called by authorized address
-     *  @param to Address to mint the tokens to
-     *  @param amount Amount of tokens to mint
-     */
-    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE){
-        require(totalSupply() + amount <= maxSupply, "Mint amount would exceed maximum supply");
-        _mint(to, amount);
+        _mint(tokenReceiver, _totalSupply);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -115,24 +98,6 @@ contract CoinchainToken is AccessControlEnumerable, ERC20, ERC20Burnable{
     function setTransferLimitEnabled(bool _transferLimitEnabled) external onlyRole(OPERATOR_ROLE){
         transferLimitEnabled = _transferLimitEnabled;
         emit TransferLimitEnabled(_transferLimitEnabled);
-    }
-
-    /**
-     * @dev Calls the public grantRole() function which verifies that the sender is a role admin
-     * @notice Grants the MINTER_ROLE to given account
-     * @param _account Address to grant the MINTER_ROLE to
-     */
-    function grantMinterRole(address _account) external {
-        grantRole(MINTER_ROLE, _account);
-    }
-
-    /**
-     * @dev Calls the public revokeRole() function which verifies that the sender is a role admin
-     * @notice Revokes the MINTER_ROLE from given account
-     * @param _account Address to revoke the MINTER_ROLE from 
-     */
-    function revokeMinterRole(address _account) external {
-        revokeRole(MINTER_ROLE, _account);
     }
 
     /**
