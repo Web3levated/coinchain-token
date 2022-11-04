@@ -142,7 +142,7 @@ contract LockPayments is Ownable {
         require(batchId < totalBatches, "Error: Invalid batchId (batch does not exist)");
         uint256 total;
         for (uint256 i = 0; i < batches[batchId].orders.length(); i++) {
-            (address addr, uint256 amount) = batches[batchId].orders.at(i);
+            (, uint256 amount) = batches[batchId].orders.at(i);
             total += amount;    
         }
         batches[batchId].state = State.Removed;
